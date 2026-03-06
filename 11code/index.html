@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker Pro</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- LOGIN -->
+    <div id="loginContainer" class="login-container">
+      <div class="login-box">
+        <h1>🎯 Habit Tracker Pro</h1>
+        <p class="login-subtitle">Track your habits, build your future</p>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-login">Login</button>
+        </form>
+        <p class="login-hint">
+          <strong>Test Users:</strong><br />
+          Username: <code>user1</code> &nbsp;Password: <code>1234</code><br />
+          Username: <code>user2</code> &nbsp;Password: <code>1234</code>
+        </p>
+        <div id="loginError" class="login-error" hidden></div>
+      </div>
+    </div>
+
+    <!-- Confetti canvas -->
+    <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+    <!-- Mood picker popover -->
+    <div
+      id="moodPickerPopover"
+      class="mood-picker-popover"
+      hidden
+      role="dialog"
+      aria-label="Select mood"
+    ></div>
+
+    <!-- APP -->
+    <div id="appContainer" class="app-container" hidden>
+      <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+          <div class="header-top">
+            <h1 id="appTitle">Habit Tracker Pro</h1>
+            <div class="header-controls">
+              <button
+                id="openBulkBtnHeader"
+                class="btn-log-yesterday"
+                title="Log yesterday's habits"
+              >
+                ⚡ Log Yesterday
+              </button>
+              <button
+                id="themeToggleBtn"
+                class="theme-toggle"
+                title="Toggle dark mode"
+              >
+                <span class="theme-icon">🌙</span>
+              </button>
+              <button id="logoutBtn" class="btn-logout">Logout</button>
+            </div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-label">Habits</div>
+              <div class="stat-value" id="totalHabits">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Completed</div>
+              <div class="stat-value" id="completedHabits">0</div>
+            </div>
+            <div class="stat-item stat-progress">
+              <div class="stat-label">Monthly Progress</div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  id="progressBar"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div class="stat-value" id="progressPercent">0%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">🔥 Best Streak</div>
+              <div class="stat-value" id="bestStreak">0 days</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">🧊 Freezes</div>
+              <div class="stat-value" id="streakFreezes">0</div>
+            </div>
+          </div>
+        </header>
+
+        <!-- BEST MONTH BANNER -->
+        <div class="best-month-banner" id="bestMonthBanner" hidden>
+          🏆 <span id="bestMonthText"></span>
+        </div>
+
+        <!-- BULK CHECK-IN PANEL -->
+        <div class="bulk-checkin-bar" id="bulkCheckinBar" hidden>
+          <div class="bulk-checkin-header">
+            <span class="bulk-checkin-title">⚡ Quick Log Yesterday</span>
+            <button id="bulkCloseBtn" class="bulk-close-btn" aria-label="Close">
+              ✕
+            </button>
+          </div>
+          <div class="bulk-checkin-habits" id="bulkCheckinHabits"></div>
+          <div class="bulk-checkin-actions">
+            <button id="bulkDoneBtn" class="btn btn-secondary">Done</button>
+            <button id="bulkAllBtn" class="btn btn-primary">
+              ✅ Check All
+            </button>
+          </div>
+        </div>
+
+        <!-- UNIFIED CONTROL PANEL (boards + categories + view toggle + log yesterday) -->
+        <div class="control-panel" id="controlPanel">
+          <div class="control-row">
+            <span class="control-label">
+              <span class="control-label-icon">📋</span> Board
+            </span>
+            <div class="pill-group" id="boardSwitcher">
+              <button class="pill-btn active" data-board="all">🌐 All</button>
+              <button class="pill-btn" data-board="health">💪 Health</button>
+              <button class="pill-btn" data-board="work">💼 Work</button>
+              <button class="pill-btn" data-board="personal">
+                🏠 Personal
+              </button>
+            </div>
+          </div>
+          <div class="control-divider"></div>
+          <div class="control-row">
+            <span class="control-label">
+              <span class="control-label-icon">🏷️</span> Filter
+            </span>
+            <div class="pill-group" id="categoryFilter">
+              <button class="pill-btn active" data-cat="all">🌐 All</button>
+              <button class="pill-btn" data-cat="health">🔵 Health</button>
+              <button class="pill-btn" data-cat="finance">🟡 Finance</button>
+              <button class="pill-btn" data-cat="learning">🟢 Learning</button>
+              <button class="pill-btn" data-cat="mindset">🟣 Mindset</button>
+              <button class="pill-btn" data-cat="other">⚪ Other</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-layout">
+          <!-- LEFT COLUMN -->
+          <div class="calendar-section">
+            <!-- Empty State (shown when no habits) -->
+            <div class="empty-state" id="emptyState" hidden>
+              <div class="empty-state-icon">🎯</div>
+              <div class="empty-state-title">Start Your Journey</div>
+              <div class="empty-state-desc">
+                You haven't added any habits yet. Tap the
+                <strong>+</strong> button to add your first habit and begin
+                tracking your progress.
+              </div>
+              <button class="empty-state-cta" id="emptyStateCta">
+                + Add Your First Habit
+              </button>
+            </div>
+            <!-- Struggling Habits Spotlight -->
+            <div class="struggling-banner" id="strugglingBanner" hidden>
+              <div class="struggling-title">
+                ⚠️ Struggling Habits (below 40%)
+              </div>
+              <div class="struggling-list" id="strugglingList"></div>
+            </div>
+
+            <!-- Calendar header — nav + view toggle together -->
+            <div class="month-header">
+              <h2 class="month-title" id="monthTitle">Month Year</h2>
+              <div class="month-controls">
+                <button
+                  id="prevBtn"
+                  class="month-nav-btn"
+                  aria-label="Previous"
+                >
+                  ← Prev
+                </button>
+                <button id="nextBtn" class="month-nav-btn" aria-label="Next">
+                  Next →
+                </button>
+                <div class="view-toggle-group">
+                  <button class="view-toggle-btn active" id="monthViewCalBtn">
+                    Month
+                  </button>
+                  <button class="view-toggle-btn" id="weekViewCalBtn">
+                    Week
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Streaks & Badges -->
+            <div class="streaks-badges-section">
+              <div class="streaks-container" id="streaksContainer"></div>
+              <div class="badges-container" id="badgesContainer"></div>
+            </div>
+
+            <!-- Freeze Banner -->
+            <div class="freeze-banner" id="freezeBanner" hidden>
+              <span
+                >🧊 You have <strong id="freezeCount">0</strong> streak
+                freeze(s) available.</span
+              >
+              <button id="useFreezeBtn" class="btn-use-freeze">
+                Use a Freeze for Today
+              </button>
+            </div>
+
+            <!-- Year Heatmap -->
+            <div class="chart-container heatmap-section">
+              <div class="section-header-row">
+                <div class="chart-title">📅 Year at a Glance</div>
+                <div class="heatmap-legend">
+                  <span class="legend-label">Less</span>
+                  <div class="hm-swatch" style="background: #ebedf0"></div>
+                  <div class="hm-swatch" style="background: #c6e48b"></div>
+                  <div class="hm-swatch" style="background: #7bc96f"></div>
+                  <div class="hm-swatch" style="background: #239a3b"></div>
+                  <div class="hm-swatch" style="background: #196127"></div>
+                  <span class="legend-label">More</span>
+                </div>
+              </div>
+              <div class="heatmap-scroll">
+                <div class="heatmap-grid" id="heatmapGrid"></div>
+              </div>
+            </div>
+
+            <!-- Calendar Table -->
+            <div class="calendar-grid">
+              <table class="calendar-table" id="calendarTable"></table>
+            </div>
+
+            <!-- Progress Chart -->
+            <div class="chart-container">
+              <div class="section-header-row">
+                <div class="chart-title">Daily Progress</div>
+                <div class="prediction-badge" id="predictionBadge" hidden>
+                  📈 On pace for: <strong id="predictionValue"></strong>
+                </div>
+              </div>
+              <canvas id="progressChart"></canvas>
+            </div>
+
+            <!-- Mental State -->
+            <div class="chart-container mental-state">
+              <div class="chart-title">
+                Mental State
+                <span class="chart-subtitle"
+                  >(click mood cell for emoji picker)</span
+                >
+              </div>
+              <div class="mental-state-grid" id="dayNumberGrid">
+                <div class="mental-label">Day</div>
+              </div>
+              <div class="mental-state-grid" id="moodGrid">
+                <div class="mental-label">Mood</div>
+              </div>
+              <div class="mental-state-grid" id="motivationGrid">
+                <div class="mental-label">Motivation</div>
+              </div>
+              <canvas id="mentalChart"></canvas>
+            </div>
+
+            <!-- Report Card -->
+            <div class="chart-container">
+              <div class="chart-title">📋 Monthly Report Card</div>
+              <div class="report-card-grid" id="reportCardGrid"></div>
+            </div>
+          </div>
+          <!-- /calendar-section -->
+
+          <!-- RIGHT SIDEBAR -->
+          <aside class="analysis-section">
+            <div
+              class="analysis-title collapsible-trigger"
+              data-target="analysisBody"
+            >
+              Analysis <span class="collapse-icon">▾</span>
+            </div>
+            <div id="analysisBody" class="collapsible-body">
+              <!-- Habit rows (with inline trash icons) injected by JS -->
+              <div id="analysisContainer"></div>
+            </div>
+
+            <!-- Share Card -->
+            <div class="sidebar-block">
+              <div
+                class="analysis-title collapsible-trigger"
+                data-target="shareCardBody"
+              >
+                📤 Share Progress <span class="collapse-icon">▾</span>
+              </div>
+              <div id="shareCardBody" class="collapsible-body">
+                <div class="share-card" id="shareCard">
+                  <div class="share-card-logo">🎯 Habit Tracker Pro</div>
+                  <div class="share-card-user" id="shareCardUser"></div>
+                  <div class="share-card-month" id="shareCardMonth"></div>
+                  <div class="share-card-big" id="shareCardBig"></div>
+                  <div class="share-card-stats" id="shareCardStats"></div>
+                  <div class="share-card-streak" id="shareCardStreak"></div>
+                  <div class="share-card-footer">habit tracker pro</div>
+                </div>
+                <button
+                  id="downloadCardBtn"
+                  class="btn btn-primary"
+                  style="width: 100%; margin-top: 10px"
+                >
+                  📥 Download Card
+                </button>
+              </div>
+            </div>
+
+            <!-- Progress Rings (moved from left col) -->
+            <div class="sidebar-block">
+              <div
+                class="analysis-title collapsible-trigger"
+                data-target="ringsBody"
+              >
+                🎯 Habit Progress Rings <span class="collapse-icon">▾</span>
+              </div>
+              <div id="ringsBody" class="collapsible-body">
+                <div class="rings-grid" id="ringsGrid"></div>
+              </div>
+            </div>
+
+            <!-- Day-of-Week Analysis (moved from left col) -->
+            <div class="sidebar-block">
+              <div
+                class="analysis-title collapsible-trigger"
+                data-target="dowBody"
+              >
+                📊 Best Day of Week <span class="collapse-icon">▾</span>
+              </div>
+              <div id="dowBody" class="collapsible-body">
+                <div class="dow-grid" id="dowGrid"></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+        <!-- /main-layout -->
+      </div>
+      <!-- /container -->
+    </div>
+    <!-- /appContainer -->
+
+    <!-- FAB: only Add remains -->
+    <button
+      id="addHabitFab"
+      class="add-habit-btn"
+      title="Add Habit"
+      aria-label="Add habit"
+    >
+      +
+    </button>
+
+    <!-- ===== MODALS ===== -->
+
+    <!-- Add Habit -->
+    <div
+      class="modal"
+      id="habitModal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add new habit"
+    >
+      <div class="modal-content glass">
+        <div class="modal-header">Add New Habit</div>
+        <div class="habit-input">
+          <label for="habitNameInput">Habit Name</label>
+          <input
+            type="text"
+            id="habitNameInput"
+            placeholder="e.g., Morning Exercise"
+          />
+        </div>
+        <div class="habit-input">
+          <label>Category</label>
+          <div class="category-picker" id="categoryPicker">
+            <div class="cat-option selected" data-cat="health">🔵 Health</div>
+            <div class="cat-option" data-cat="finance">🟡 Finance</div>
+            <div class="cat-option" data-cat="learning">🟢 Learning</div>
+            <div class="cat-option" data-cat="mindset">🟣 Mindset</div>
+            <div class="cat-option" data-cat="other">⚪ Other</div>
+          </div>
+        </div>
+        <div class="habit-input">
+          <label>Board</label>
+          <div class="category-picker" id="boardPicker">
+            <div class="cat-option selected" data-board="all">🌐 All</div>
+            <div class="cat-option" data-board="health">💪 Health</div>
+            <div class="cat-option" data-board="work">💼 Work</div>
+            <div class="cat-option" data-board="personal">🏠 Personal</div>
+          </div>
+        </div>
+        <div class="habit-input">
+          <label>Choose Emoji</label>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div class="button-group">
+          <button id="cancelAddHabitBtn" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button id="confirmAddHabitBtn" class="btn btn-primary">
+            Add Habit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day Notes -->
+    <div class="modal" id="dayNotesModal" role="dialog" aria-modal="true">
+      <div class="modal-content glass">
+        <div class="modal-header" id="dayNotesTitle">Notes for Day</div>
+        <div class="habit-input">
+          <label for="dayNotesInput">📝 Daily Friction Log</label>
+          <textarea
+            id="dayNotesInput"
+            rows="5"
+            placeholder="e.g., Skipped gym because I slept poorly…"
+          ></textarea>
+        </div>
+        <div id="dayNotesSavedMsg" class="saved-msg" hidden>✅ Note saved!</div>
+        <div class="button-group">
+          <button id="cancelNoteBtn" class="btn btn-secondary">Cancel</button>
+          <button id="saveNoteBtn" class="btn btn-primary">Save Note</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker Pro</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ========== LOGIN PAGE ========== -->
+    <div id="loginContainer" class="login-container active">
+      <div class="login-box">
+        <h1>🎯 Habit Tracker Pro</h1>
+        <p class="login-subtitle">Track your habits, build your future</p>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="username">Username:</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password:</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-login">Login</button>
+        </form>
+
+        <p class="login-hint">
+          <strong>Test Users:</strong><br />
+          Username: <code>user1</code>, Password: <code>1234</code><br />
+          Username: <code>user2</code>, Password: <code>1234</code><br />
+          Username: <code>user3</code>, Password: <code>1234</code>
+        </p>
+
+        <div id="loginError" class="login-error" style="display: none"></div>
+      </div>
+    </div>
+
+    <!-- ========== CONFETTI CANVAS (for micro-interactions) ========== -->
+    <canvas
+      id="confettiCanvas"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+        display: none;
+      "
+    ></canvas>
+
+    <!-- ========== APP CONTAINER ========== -->
+    <div id="appContainer" class="app-container" style="display: none">
+      <div class="container">
+        <!-- Header with Stats -->
+        <div class="header">
+          <div class="header-top">
+            <!-- FIX: Single title element with greeting injected by JS -->
+            <h1 id="appTitle">Habit Tracker Pro</h1>
+            <div class="header-controls">
+              <!-- Dark Mode Toggle -->
+              <button
+                class="theme-toggle"
+                onclick="toggleTheme()"
+                title="Toggle Dark Mode"
+              >
+                <span class="theme-icon">🌙</span>
+              </button>
+              <!-- Logout -->
+              <button class="btn-logout" onclick="handleLogout()">
+                Logout
+              </button>
+              <!-- Calendar View Toggle -->
+              <div class="calendar-view-toggle">
+                <button
+                  class="view-toggle-btn active"
+                  id="monthViewCalBtn"
+                  onclick="setCalendarView('month')"
+                >
+                  Month
+                </button>
+                <button
+                  class="view-toggle-btn"
+                  id="weekViewCalBtn"
+                  onclick="setCalendarView('week')"
+                >
+                  Week
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-label">Number of Habits</div>
+              <div class="stat-value" id="totalHabits">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Completed Habits</div>
+              <div class="stat-value" id="completedHabits">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Progress</div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  id="progressBar"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Progress in %</div>
+              <div class="stat-value" id="progressPercent">0%</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">🔥 Best Streak</div>
+              <div class="stat-value" id="bestStreak">0 days</div>
+            </div>
+            <!-- NEW: Streak Freeze Display -->
+            <div class="stat-item">
+              <div class="stat-label">🧊 Streak Freezes</div>
+              <div class="stat-value" id="streakFreezes">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NEW: Habit Categories Filter Bar -->
+        <div class="category-filter-bar" id="categoryFilterBar">
+          <button
+            class="cat-filter-btn active"
+            data-cat="all"
+            onclick="filterByCategory('all')"
+          >
+            🌐 All
+          </button>
+          <button
+            class="cat-filter-btn"
+            data-cat="health"
+            onclick="filterByCategory('health')"
+          >
+            🔵 Health
+          </button>
+          <button
+            class="cat-filter-btn"
+            data-cat="finance"
+            onclick="filterByCategory('finance')"
+          >
+            🟡 Finance
+          </button>
+          <button
+            class="cat-filter-btn"
+            data-cat="learning"
+            onclick="filterByCategory('learning')"
+          >
+            🟢 Learning
+          </button>
+          <button
+            class="cat-filter-btn"
+            data-cat="mindset"
+            onclick="filterByCategory('mindset')"
+          >
+            🟣 Mindset
+          </button>
+          <button
+            class="cat-filter-btn"
+            data-cat="other"
+            onclick="filterByCategory('other')"
+          >
+            ⚪ Other
+          </button>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+          <!-- Calendar Section -->
+          <div class="calendar-section">
+            <div class="month-header">
+              <h2 class="month-title" id="monthTitle">November 2025</h2>
+              <div class="month-nav">
+                <button onclick="changeMonth(-1)">← Prev</button>
+                <button onclick="changeMonth(1)">Next →</button>
+              </div>
+            </div>
+
+            <!-- Streaks & Badges Section -->
+            <div class="streaks-badges-section">
+              <div class="streaks-container" id="streaksContainer"></div>
+              <div class="badges-container" id="badgesContainer"></div>
+            </div>
+
+            <!-- NEW: Streak Freeze Manager -->
+            <div class="freeze-banner" id="freezeBanner" style="display: none">
+              <span
+                >🧊 You have <strong id="freezeCount">0</strong> streak
+                freeze(s) available.</span
+              >
+              <button class="btn-use-freeze" onclick="useStreakFreeze()">
+                Use a Freeze for Today
+              </button>
+            </div>
+
+            <div class="calendar-grid">
+              <table class="calendar-table" id="calendarTable"></table>
+            </div>
+
+            <!-- Progress Chart -->
+            <div class="chart-container">
+              <div class="chart-title">Daily Progress</div>
+              <canvas id="progressChart"></canvas>
+            </div>
+
+            <!-- Mental State Tracking -->
+            <div class="chart-container mental-state">
+              <div class="chart-title-with-toggle">
+                <div class="chart-title">Mental State</div>
+              </div>
+              <div class="mental-state-grid" id="dayNumberGrid">
+                <div class="mental-label">Day</div>
+              </div>
+              <div class="mental-state-grid" id="moodGrid">
+                <div class="mental-label">Mood</div>
+              </div>
+              <div class="mental-state-grid" id="motivationGrid">
+                <div class="mental-label">Motivation</div>
+              </div>
+              <canvas id="mentalChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Analysis Sidebar -->
+          <div class="analysis-section">
+            <div class="analysis-title">Analysis</div>
+            <div id="analysisContainer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Habit Button -->
+    <button class="add-habit-btn" onclick="openHabitModal()" title="Add Habit">
+      +
+    </button>
+
+    <!-- Remove Habit Button -->
+    <button
+      class="remove-habit-btn"
+      onclick="openRemoveModal()"
+      title="Remove Habit"
+    >
+      −
+    </button>
+
+    <!-- ========== HABIT SETUP MODAL ========== -->
+    <div class="modal" id="habitModal">
+      <div class="modal-content">
+        <div class="modal-header">Add New Habit</div>
+        <div class="habit-input">
+          <label>Habit Name</label>
+          <input
+            type="text"
+            id="habitNameInput"
+            placeholder="e.g., Morning Exercise"
+          />
+        </div>
+
+        <!-- NEW: Category Picker -->
+        <div class="habit-input">
+          <label>Category</label>
+          <div class="category-picker" id="categoryPicker">
+            <div
+              class="cat-option selected"
+              data-cat="health"
+              onclick="selectCategory('health')"
+            >
+              🔵 Health
+            </div>
+            <div
+              class="cat-option"
+              data-cat="finance"
+              onclick="selectCategory('finance')"
+            >
+              🟡 Finance
+            </div>
+            <div
+              class="cat-option"
+              data-cat="learning"
+              onclick="selectCategory('learning')"
+            >
+              🟢 Learning
+            </div>
+            <div
+              class="cat-option"
+              data-cat="mindset"
+              onclick="selectCategory('mindset')"
+            >
+              🟣 Mindset
+            </div>
+            <div
+              class="cat-option"
+              data-cat="other"
+              onclick="selectCategory('other')"
+            >
+              ⚪ Other
+            </div>
+          </div>
+        </div>
+
+        <div class="habit-input">
+          <label>Choose Emoji</label>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="closeHabitModal()">
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="addHabit()">
+            Add Habit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== REMOVE HABIT MODAL ========== -->
+    <div class="modal" id="removeHabitModal">
+      <div class="modal-content">
+        <div class="modal-header">Remove Habit</div>
+        <div class="habit-list" id="habitListToRemove"></div>
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="closeRemoveModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== DAY NOTES MODAL ========== -->
+    <div class="modal" id="dayNotesModal">
+      <div class="modal-content">
+        <div class="modal-header" id="dayNotesTitle">Notes for Day</div>
+        <div class="habit-input">
+          <label>📝 Daily Friction Log</label>
+          <textarea
+            id="dayNotesInput"
+            placeholder="e.g., Skipped gym because I slept poorly. Nailed the coding session!"
+            rows="5"
+            style="
+              width: 100%;
+              padding: 10px;
+              border: 1px solid var(--color-border);
+              border-radius: 6px;
+              font-size: 14px;
+              background: var(--color-surface);
+              color: var(--color-text);
+              resize: vertical;
+            "
+          ></textarea>
+        </div>
+        <div
+          id="dayNotesSavedMsg"
+          style="
+            display: none;
+            color: var(--color-success);
+            font-size: 13px;
+            margin-top: 5px;
+          "
+        >
+          ✅ Note saved!
+        </div>
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="closeDayNotesModal()">
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="saveDayNote()">
+            Save Note
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

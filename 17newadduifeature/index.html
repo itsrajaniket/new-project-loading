@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+    <div
+      id="moodPickerPopover"
+      class="mood-picker-popover"
+      hidden
+      role="dialog"
+      aria-label="Select mood"
+    ></div>
+
+    <!-- ══════════════════════════════════════
+         LOGIN
+    ══════════════════════════════════════ -->
+    <div id="loginContainer" class="login-container">
+      <div class="login-box">
+        <div class="login-logo">🎯</div>
+        <h1 class="login-title">Habit Tracker Pro</h1>
+        <p class="login-subtitle">Build streaks. Build yourself.</p>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              placeholder="Enter your username"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-login">Sign In →</button>
+        </form>
+        <p class="login-hint">
+          Demo: <code>user1</code> / <code>1234</code> &nbsp;·&nbsp;
+          <code>user2</code> / <code>1234</code>
+        </p>
+        <div id="loginError" class="login-error" hidden></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         APP SHELL
+    ══════════════════════════════════════ -->
+    <div id="appContainer" class="app-container" hidden>
+      <!-- ─── ZONE 1: GLOBAL NAV ─── -->
+      <nav class="global-nav">
+        <div class="nav-left">
+          <span class="nav-logo">🎯</span>
+          <span class="nav-title">Habit Tracker Pro</span>
+        </div>
+        <div class="nav-center">
+          <span class="nav-greeting" id="navGreeting"></span>
+        </div>
+        <div class="nav-right">
+          <button
+            id="themeToggleBtn"
+            class="nav-icon-btn"
+            title="Toggle dark mode"
+          >
+            <span class="theme-icon">🌙</span>
+          </button>
+          <button id="logoutBtn" class="btn-logout">Logout</button>
+        </div>
+      </nav>
+
+      <!-- ─── ZONE 2: COMMAND BAR ─── -->
+      <div class="command-bar">
+        <div class="command-section">
+          <span class="command-label">Board</span>
+          <div class="pill-group" id="boardSwitcher">
+            <button class="pill-btn active" data-board="all">🌐 All</button>
+            <button class="pill-btn" data-board="health">💪 Health</button>
+            <button class="pill-btn" data-board="work">💼 Work</button>
+            <button class="pill-btn" data-board="personal">🏠 Personal</button>
+          </div>
+        </div>
+        <div class="command-divider"></div>
+        <div class="command-section">
+          <span class="command-label">Filter</span>
+          <div class="pill-group" id="categoryFilter">
+            <button class="pill-btn active" data-cat="all">All</button>
+            <button class="pill-btn" data-cat="health">🔵 Health</button>
+            <button class="pill-btn" data-cat="finance">🟡 Finance</button>
+            <button class="pill-btn" data-cat="learning">🟢 Learning</button>
+            <button class="pill-btn" data-cat="mindset">🟣 Mindset</button>
+            <button class="pill-btn" data-cat="other">⚪ Other</button>
+          </div>
+        </div>
+        <div class="command-divider"></div>
+        <!-- Moved Log Yesterday next to filters for a unified top-bar scanning path -->
+        <button id="openBulkBtn" class="btn-log-yesterday">
+          ⚡ Log Yesterday
+        </button>
+      </div>
+
+      <!-- Banners (full-width, sit between command bar and main layout) -->
+      <div class="global-banners">
+        <div class="best-month-banner" id="bestMonthBanner" hidden>
+          🏆 <span id="bestMonthText"></span>
+        </div>
+        <div class="bulk-checkin-bar" id="bulkCheckinBar" hidden>
+          <div class="bulk-checkin-header">
+            <span class="bulk-checkin-title">⚡ Quick Log Yesterday</span>
+            <button id="bulkCloseBtn" class="bulk-close-btn" aria-label="Close">
+              ✕
+            </button>
+          </div>
+          <div class="bulk-checkin-habits" id="bulkCheckinHabits"></div>
+          <div class="bulk-checkin-actions">
+            <button id="bulkDoneBtn" class="btn btn-secondary">Done</button>
+            <button id="bulkAllBtn" class="btn btn-primary">
+              ✅ Check All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── ZONES 3+4: MAIN GRID ─── -->
+      <div class="main-layout">
+        <!-- ZONE 3: EXECUTION ZONE (75%) -->
+        <main class="execution-zone">
+          <!-- Empty State -->
+          <div class="empty-state" id="emptyState" hidden>
+            <div class="empty-state-icon">🎯</div>
+            <div class="empty-state-title">Start Your Journey</div>
+            <div class="empty-state-desc">
+              No habits yet. Tap <strong>+</strong> to add your first habit and
+              begin tracking.
+            </div>
+            <button class="empty-state-cta" id="emptyStateCta">
+              + Add Your First Habit
+            </button>
+          </div>
+
+          <!-- Alerts -->
+          <div class="alerts-row" id="alertsRow">
+            <div class="struggling-banner" id="strugglingBanner" hidden>
+              <div class="struggling-title">
+                ⚠️ Struggling Habits (below 40%)
+              </div>
+              <div class="struggling-list" id="strugglingList"></div>
+            </div>
+            <div class="freeze-banner" id="freezeBanner" hidden>
+              <span
+                >🧊 You have <strong id="freezeCount">0</strong> streak
+                freeze(s) available.</span
+              >
+              <button id="useFreezeBtn" class="btn-use-freeze">
+                Use a Freeze for Today
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar nav -->
+          <div class="month-header">
+            <h2 class="month-title" id="monthTitle">Month Year</h2>
+            <div class="month-controls">
+              <button id="prevBtn" class="month-nav-btn" aria-label="Previous">
+                ← Prev
+              </button>
+              <button id="nextBtn" class="month-nav-btn" aria-label="Next">
+                Next →
+              </button>
+              <div class="view-toggle-group">
+                <button class="view-toggle-btn active" id="monthViewCalBtn">
+                  Month
+                </button>
+                <button class="view-toggle-btn" id="weekViewCalBtn">
+                  Week
+                </button>
+                <button class="view-toggle-btn" id="todayViewCalBtn">
+                  Today
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HERO: Calendar Table -->
+          <div class="calendar-grid">
+            <table class="calendar-table" id="calendarTable"></table>
+          </div>
+          <!-- Inline Add Habit CTA — replaces viewport-fixed FAB to avoid sidebar overlap -->
+          <button
+            id="addHabitFab"
+            class="inline-add-habit-btn"
+            aria-label="Add habit"
+          >
+            <span class="inline-add-icon">＋</span>
+            <span>Add Habit</span>
+          </button>
+
+          <!-- Daily Progress Chart -->
+          <div class="chart-block">
+            <div class="chart-block-header">
+              <span class="chart-block-title">📈 Daily Progress</span>
+              <div class="prediction-badge" id="predictionBadge" hidden>
+                On pace for: <strong id="predictionValue"></strong>
+              </div>
+            </div>
+            <canvas id="progressChart"></canvas>
+          </div>
+        </main>
+
+        <!-- ZONE 4: MOTIVATION SIDEBAR (25%) -->
+        <aside class="motivation-sidebar">
+          <!-- Stats Dashboard -->
+          <div class="sidebar-card stats-dashboard">
+            <div class="sidebar-card-title">Dashboard</div>
+            <div class="stats-grid-2x2">
+              <div class="stat-tile">
+                <div class="stat-tile-value" id="totalHabits">0</div>
+                <div class="stat-tile-label">Habits</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-tile-value" id="completedHabits">0</div>
+                <div class="stat-tile-label">Completed</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-tile-value" id="bestStreak">0d</div>
+                <div class="stat-tile-label">🔥 Best Streak</div>
+              </div>
+              <div class="stat-tile">
+                <div class="stat-tile-value" id="streakFreezes">0</div>
+                <div class="stat-tile-label">🧊 Freezes</div>
+              </div>
+            </div>
+            <div class="sidebar-progress-wrap">
+              <div class="sidebar-progress-label">
+                <span>Monthly Progress</span>
+                <span id="progressPercent" class="progress-pct-value">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div
+                  class="progress-fill"
+                  id="progressBar"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Streaks -->
+          <div class="sidebar-card">
+            <div
+              class="sidebar-card-title collapsible-trigger"
+              data-target="streaksBody"
+            >
+              🔥 Current Streaks <span class="collapse-icon">▾</span>
+            </div>
+            <div id="streaksBody" class="collapsible-body">
+              <div id="streaksContainer"></div>
+            </div>
+          </div>
+
+          <!-- Achievements -->
+          <div class="sidebar-card">
+            <div
+              class="sidebar-card-title collapsible-trigger"
+              data-target="badgesBody"
+            >
+              🏆 Achievements <span class="collapse-icon">▾</span>
+            </div>
+            <div id="badgesBody" class="collapsible-body">
+              <div id="badgesContainer"></div>
+            </div>
+          </div>
+
+          <!-- Habit Analysis -->
+          <div class="sidebar-card">
+            <div
+              class="sidebar-card-title collapsible-trigger"
+              data-target="analysisBody"
+            >
+              📊 Habit Analysis <span class="collapse-icon">▾</span>
+            </div>
+            <div id="analysisBody" class="collapsible-body">
+              <div id="analysisContainer"></div>
+            </div>
+          </div>
+
+          <!-- Share Card -->
+          <div class="sidebar-card">
+            <div
+              class="sidebar-card-title collapsible-trigger"
+              data-target="shareBody"
+            >
+              📤 Share Progress <span class="collapse-icon">▾</span>
+            </div>
+            <div id="shareBody" class="collapsible-body">
+              <div class="share-card" id="shareCard">
+                <div class="share-card-logo">🎯 Habit Tracker Pro</div>
+                <div class="share-card-user" id="shareCardUser"></div>
+                <div class="share-card-month" id="shareCardMonth"></div>
+                <div class="share-card-big" id="shareCardBig"></div>
+                <div class="share-card-stats" id="shareCardStats"></div>
+                <div class="share-card-streak" id="shareCardStreak"></div>
+                <div class="share-card-footer">habit tracker pro</div>
+              </div>
+              <button
+                id="downloadCardBtn"
+                class="btn btn-primary"
+                style="width: 100%; margin-top: 10px"
+              >
+                📥 Download Card
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <!-- /main-layout -->
+
+      <!-- ─── ZONE 5: ANALYTICS FOOTER — BENTO BOX ─── -->
+      <footer class="analytics-footer">
+        <div class="footer-header">
+          <div class="footer-header-title">📈 Deep Analytics</div>
+          <div class="footer-header-sub">
+            Patterns, insights &amp; reflections
+          </div>
+          <button
+            id="analyticsToggleBtn"
+            class="analytics-toggle-btn"
+            aria-expanded="false"
+            title="Show/hide analytics"
+          >
+            Show ▾
+          </button>
+        </div>
+        <div id="analyticsBody" class="analytics-body collapsed">
+          <!-- Bento 1: Year Heatmap (wide) -->
+          <div class="bento-box bento-heatmap">
+            <div class="bento-title">
+              📅 Year at a Glance
+              <div class="heatmap-legend">
+                <span class="legend-label">Less</span>
+                <div class="hm-swatch hm-lv0"></div>
+                <div class="hm-swatch hm-lv1"></div>
+                <div class="hm-swatch hm-lv2"></div>
+                <div class="hm-swatch hm-lv3"></div>
+                <div class="hm-swatch hm-lv4"></div>
+                <span class="legend-label">More</span>
+              </div>
+            </div>
+            <div class="heatmap-scroll">
+              <div class="heatmap-grid" id="heatmapGrid"></div>
+            </div>
+          </div>
+
+          <!-- Bento 2: Report Card -->
+          <div class="bento-box bento-report">
+            <div class="bento-title">📋 Monthly Report Card</div>
+            <div class="report-card-grid" id="reportCardGrid"></div>
+          </div>
+
+          <!-- Bento 3: Day-of-Week -->
+          <div class="bento-box bento-dow">
+            <div class="bento-title">📊 Best Day of Week</div>
+            <div class="dow-grid" id="dowGrid"></div>
+          </div>
+
+          <!-- Bento 4: Progress Rings -->
+          <div class="bento-box bento-rings">
+            <div class="bento-title">🎯 Habit Progress Rings</div>
+            <div class="rings-grid" id="ringsGrid"></div>
+          </div>
+
+          <!-- Bento 5: Mental State (wide, full bottom row) -->
+          <div class="bento-box bento-mental">
+            <div class="bento-title">
+              🧠 Mental State
+              <span class="bento-subtitle"
+                >click mood cell for emoji · click motivation to rate</span
+              >
+            </div>
+            <div class="mental-state-grid" id="dayNumberGrid">
+              <div class="mental-label">Day</div>
+            </div>
+            <div class="mental-state-grid" id="moodGrid">
+              <div class="mental-label">Mood</div>
+            </div>
+            <div class="mental-state-grid" id="motivationGrid">
+              <div class="mental-label">Motivation</div>
+            </div>
+            <canvas id="mentalChart"></canvas>
+          </div>
+        </div>
+        <!-- /analyticsBody -->
+      </footer>
+    </div>
+    <!-- /appContainer -->
+
+    <!-- ═══ MODALS ═══ -->
+    <div
+      class="modal"
+      id="habitModal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add new habit"
+    >
+      <div class="modal-content glass">
+        <div class="modal-header">Add New Habit</div>
+        <div class="habit-input">
+          <label for="habitNameInput">Habit Name</label>
+          <input
+            type="text"
+            id="habitNameInput"
+            placeholder="e.g., Morning Exercise"
+          />
+        </div>
+        <div class="habit-input">
+          <label>Category</label>
+          <div class="category-picker" id="categoryPicker">
+            <div class="cat-option selected" data-cat="health">🔵 Health</div>
+            <div class="cat-option" data-cat="finance">🟡 Finance</div>
+            <div class="cat-option" data-cat="learning">🟢 Learning</div>
+            <div class="cat-option" data-cat="mindset">🟣 Mindset</div>
+            <div class="cat-option" data-cat="other">⚪ Other</div>
+          </div>
+        </div>
+        <div class="habit-input">
+          <label>Board</label>
+          <div class="category-picker" id="boardPicker">
+            <div class="cat-option selected" data-board="all">🌐 All</div>
+            <div class="cat-option" data-board="health">💪 Health</div>
+            <div class="cat-option" data-board="work">💼 Work</div>
+            <div class="cat-option" data-board="personal">🏠 Personal</div>
+          </div>
+        </div>
+        <div class="habit-input">
+          <label>Choose Emoji</label>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div class="button-group">
+          <button id="cancelAddHabitBtn" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button id="confirmAddHabitBtn" class="btn btn-primary">
+            Add Habit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="dayNotesModal" role="dialog" aria-modal="true">
+      <div class="modal-content glass">
+        <div class="modal-header" id="dayNotesTitle">Notes for Day</div>
+        <div class="habit-input">
+          <label for="dayNotesInput">📝 Daily Friction Log</label>
+          <textarea
+            id="dayNotesInput"
+            rows="5"
+            placeholder="e.g., Skipped gym because I slept poorly…"
+          ></textarea>
+        </div>
+        <div id="dayNotesSavedMsg" class="saved-msg" hidden>✅ Note saved!</div>
+        <div class="button-group">
+          <button id="cancelNoteBtn" class="btn btn-secondary">Cancel</button>
+          <button id="saveNoteBtn" class="btn btn-primary">Save Note</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
